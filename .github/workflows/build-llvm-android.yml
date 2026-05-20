@@ -61,8 +61,8 @@ jobs:
             -DLLVM_ENABLE_ZSTD=OFF \
             -DLLVM_ENABLE_VISIBILITY_INLINES_HIDDEN=OFF \
             -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF \
-            -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections" \
-            -DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections"
+            -DCMAKE_CXX_FLAGS="-DLLVM_BUILD_LLVM_DYLIB" \
+            -DCMAKE_C_FLAGS="-DLLVM_BUILD_LLVM_DYLIB"
           cmake --build llvm-android -j$(nproc)
 
       - name: Install & package
