@@ -41,41 +41,46 @@ jobs:
             -DLLVM_ENABLE_PROJECTS=""
           cmake --build llvm-native --target llvm-tblgen -j$(nproc)
 
-      - name: Cross-build LLVM static libs for Android arm64
+      - name: Cross-build & package LLVM static libs for Android
         run: |
-          cmake -G Ninja -B llvm-android -S llvm-project-21.1.0.src/llvm \
-            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DLLVM_TARGETS_TO_BUILD=AArch64 \
-            -DLLVM_TABLEGEN="$(pwd)/llvm-native/bin/llvm-tblgen" \
-            -DLLVM_INCLUDE_TESTS=OFF \
-            -DLLVM_INCLUDE_EXAMPLES=OFF \
-            -DLLVM_INCLUDE_BENCHMARKS=OFF \
-            -DLLVM_BUILD_TOOLS=OFF \
-            -DLLVM_INCLUDE_UTILS=OFF \
-            -DLLVM_ENABLE_PROJECTS="" \
-            -DLLVM_ENABLE_TERMINFO=OFF \
-            -DLLVM_ENABLE_ZLIB=OFF \
-            -DLLVM_ENABLE_ZSTD=OFF \
-            -DLLVM_ENABLE_VISIBILITY_INLINES_HIDDEN=OFF \
-            -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF \
-            -DLLVM_ENABLE_RTTI=ON
-          cmake --build llvm-android -j$(nproc)
+          for abi in arm64-v8a x86_64; do
+            case $abi in
+              arm64-v8a) arch=aarch64; target=AArch64 ;;
+              x86_64)    arch=x86_64;  target=X86 ;;
+            esac
 
-      - name: Install & package
-        run: |
-          mkdir -p install
-          cmake --install llvm-android --prefix install
-          # Strip debug symbols from static libs (saves ~60%)
-          STRIP="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
-          find install/lib -name "*.a" -exec "$STRIP" --strip-debug {} \;
-          # Remove non-essential dirs
-          rm -rf install/share install/libexec
-          tar cJf llvm-android-aarch64.tar.xz -C install .
+            cmake -G Ninja -B "llvm-android-$arch" -S llvm-project-21.1.0.src/llvm \
+              -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+              -DANDROID_ABI="$abi" \
+              -DANDROID_PLATFORM=android-24 \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DLLVM_TARGETS_TO_BUILD="$target" \
+              -DLLVM_TABLEGEN="$(pwd)/llvm-native/bin/llvm-tblgen" \
+              -DLLVM_INCLUDE_TESTS=OFF \
+              -DLLVM_INCLUDE_EXAMPLES=OFF \
+              -DLLVM_INCLUDE_BENCHMARKS=OFF \
+              -DLLVM_BUILD_TOOLS=OFF \
+              -DLLVM_INCLUDE_UTILS=OFF \
+              -DLLVM_ENABLE_PROJECTS="" \
+              -DLLVM_ENABLE_TERMINFO=OFF \
+              -DLLVM_ENABLE_ZLIB=OFF \
+              -DLLVM_ENABLE_ZSTD=OFF \
+              -DLLVM_ENABLE_VISIBILITY_INLINES_HIDDEN=OFF \
+              -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF \
+              -DLLVM_ENABLE_RTTI=ON
+            cmake --build "llvm-android-$arch" -j$(nproc)
 
-      - name: Upload release asset
+            mkdir -p "install-$arch"
+            cmake --install "llvm-android-$arch" --prefix "install-$arch"
+            STRIP="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+            find "install-$arch/lib" -name "*.a" -exec "$STRIP" --strip-debug {} \;
+            rm -rf "install-$arch/share" "install-$arch/libexec"
+            tar cJf "llvm-android-$arch.tar.xz" -C "install-$arch" .
+          done
+
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: llvm-android-aarch64.tar.xz
+          files: |
+            llvm-android-aarch64.tar.xz
+            llvm-android-x86_64.tar.xz
