@@ -60,7 +60,9 @@ jobs:
             -DLLVM_ENABLE_ZLIB=OFF \
             -DLLVM_ENABLE_ZSTD=OFF \
             -DLLVM_ENABLE_VISIBILITY_INLINES_HIDDEN=OFF \
-            -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF
+            -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF \
+            -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections" \
+            -DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections"
           cmake --build llvm-android -j$(nproc)
 
       - name: Install & package
@@ -72,9 +74,9 @@ jobs:
           find install/lib -name "*.a" -exec "$STRIP" --strip-debug {} \;
           # Remove non-essential dirs
           rm -rf install/share install/libexec
-          tar czf llvm-android-aarch64.tar.gz -C install .
+          tar cJf llvm-android-aarch64.tar.xz -C install .
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: llvm-android-aarch64.tar.gz
+          files: llvm-android-aarch64.tar.xz
