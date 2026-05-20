@@ -61,7 +61,7 @@ jobs:
             -DLLVM_ENABLE_ZSTD=OFF \
             -DLLVM_ENABLE_VISIBILITY_INLINES_HIDDEN=OFF \
             -DLLVM_ENABLE_VISIBILITY_HIDDEN=OFF \
-            -DLLVM_ENABLE_RTTI=ON \
+            -DLLVM_ENABLE_RTTI=ON
           cmake --build llvm-android -j$(nproc)
 
       - name: Install & package
